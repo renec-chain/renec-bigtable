@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-PATH_TO_LEDGER_DIR=$1
-PATH_TO_LEDGER_SNAPSHOT_DIR=$2
-PATH_TO_IDENTITY_KEYPAIR=$3
-PATH_TO_LOGS=$4
+PATH_TO_LEDGER_DIR=/home/ubuntu/renec-cluster/ledger
+PATH_TO_LEDGER_SNAPSHOT_DIR=/home/ubuntu/renec-cluster/ledger/snapshot
+PATH_TO_IDENTITY_KEYPAIR=/home/ubuntu/renec-cluster/keypairs/validator-identity.json
+PATH_TO_LOGS=/home/ubuntu/renec-cluster/renec-validator-error.log
 
 ledger_dir=$PATH_TO_LEDGER_DIR
 ledger_snapshots_dir=$PATH_TO_LEDGER_SNAPSHOT_DIR
@@ -122,7 +122,7 @@ args=(
   --limit-ledger-size 400000000
 )
 
-if ! [[ $(solana --version) =~ \ 1\.4\.[0-9]+ ]]; then
+if ! [[ $(renec --version) =~ \ 1\.4\.[0-9]+ ]]; then
   if [[ -n $ENABLE_BPF_JIT ]]; then
     args+=(--bpf-jit)
   fi
@@ -248,7 +248,7 @@ prepare_archive_location
 while true; do
   rm -f ~/.init-complete
 
-  solana-validator "${args[@]}" &
+  renec-validator "${args[@]}" &
   pid=$!
   datapoint validator-started
 
@@ -284,7 +284,7 @@ while true; do
     fi
 
     if ! $caught_up; then
-      if ! timeout 15m solana catchup --url "$RPC_URL" "$identity_pubkey" http://127.0.0.1:8899; then
+      if ! timeout 15m renec catchup --url "$RPC_URL" "$identity_pubkey" http://127.0.0.1:8888; then
         echo "catchup failed..."
         if [[ $SECONDS -gt 600 ]]; then
           datapoint_error validator-not-caught-up
@@ -300,7 +300,7 @@ while true; do
 
     last_archive_epoch=$(cat ~/ledger-archive/epoch || true)
     if [[ -z "$last_archive_epoch" ]]; then
-      if ! solana --url "$RPC_URL" epoch > ~/ledger-archive/epoch; then
+      if ! renec --url "$RPC_URL" epoch > ~/ledger-archive/epoch; then
         datapoint_error failed-to-set-epoch
         sleep 10
       fi
@@ -311,7 +311,7 @@ while true; do
 
     current_epoch=""
     for _ in $(seq 1 10); do
-      current_epoch=$(solana --url "$RPC_URL" epoch || true)
+      current_epoch=$(renec --url "$RPC_URL" epoch || true)
       if [[ -n "$current_epoch" ]]; then
         break
       fi
